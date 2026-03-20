@@ -1,0 +1,278 @@
+import { useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { format, parseISO } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import { Plus, Calendar, Wallet, ChevronDown, ChevronRight } from 'lucide-react';
+import { useTrips } from '../contexts/TripContext';
+import type { Activity, DayPlan } from '../types';
+import ActivityCard from '../components/ActivityCard';
+import ActivityForm from '../components/ActivityForm';
+import ExpenseSummary from '../components/ExpenseSummary';
+
+type Tab = 'itinerary' | 'expenses';
+
+export default function TripDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { getTrip, updateTrip, rates, ratesLoading, refreshRates } = useTrips();
+  const trip = getTrip(id || '');
+
+  const [activeTab, setActiveTab] = useState<Tab>('itinerary');
+  const [editingActivity, setEditingActivity] = useState<{ dayId: string; activity?: Activity } | null>(null);
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const toggleDay = useCallback((dayId: string) => {
+    setCollapsedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(dayId)) next.delete(dayId);
+      else next.add(dayId);
+      return next;
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((dayId: string) => (event: DragEndEvent) => {
+    if (!trip) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const updatedDays = trip.days.map(day => {
+      if (day.id !== dayId) return day;
+      const oldIndex = day.activities.findIndex(a => a.id === active.id);
+      const newIndex = day.activities.findIndex(a => a.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return day;
+      return { ...day, activities: arrayMove(day.activities, oldIndex, newIndex) };
+    });
+
+    updateTrip({ ...trip, days: updatedDays });
+  }, [trip, updateTrip]);
+
+  const handleSaveActivity = useCallback((dayId: string, activity: Activity) => {
+    if (!trip) return;
+    const updatedDays = trip.days.map(day => {
+      if (day.id !== dayId) return day;
+      const exists = day.activities.find(a => a.id === activity.id);
+      if (exists) {
+        return { ...day, activities: day.activities.map(a => a.id === activity.id ? activity : a) };
+      }
+      return { ...day, activities: [...day.activities, { ...activity, order: day.activities.length }] };
+    });
+    updateTrip({ ...trip, days: updatedDays });
+    setEditingActivity(null);
+  }, [trip, updateTrip]);
+
+  const handleDeleteActivity = useCallback((dayId: string, activityId: string) => {
+    if (!trip) return;
+    const updatedDays = trip.days.map(day => {
+      if (day.id !== dayId) return day;
+      return { ...day, activities: day.activities.filter(a => a.id !== activityId) };
+    });
+    updateTrip({ ...trip, days: updatedDays });
+  }, [trip, updateTrip]);
+
+  if (!trip) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-on-surface-secondary">旅行不存在</p>
+        <button onClick={() => navigate('/')} className="mt-4 text-primary hover:underline">
+          返回首页
+        </button>
+      </div>
+    );
+  }
+
+  const totalActivities = trip.days.reduce((s, d) => s + d.activities.length, 0);
+
+  return (
+    <div>
+      {/* Trip header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: trip.coverColor }} />
+          <h1 className="text-xl sm:text-2xl font-bold">{trip.name}</h1>
+        </div>
+        <p className="text-sm text-on-surface-secondary">
+          {trip.destination} · {trip.startDate} ~ {trip.endDate} · {trip.days.length}天 · {totalActivities}项活动
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-surface-container p-1 rounded-lg">
+        <button
+          onClick={() => setActiveTab('itinerary')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'itinerary'
+              ? 'bg-white shadow-sm text-on-surface'
+              : 'text-on-surface-secondary hover:text-on-surface'
+          }`}
+        >
+          <Calendar size={16} />
+          行程
+        </button>
+        <button
+          onClick={() => setActiveTab('expenses')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'expenses'
+              ? 'bg-white shadow-sm text-on-surface'
+              : 'text-on-surface-secondary hover:text-on-surface'
+          }`}
+        >
+          <Wallet size={16} />
+          费用
+        </button>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'itinerary' ? (
+        <div className="space-y-4">
+          {trip.days.map((day, dayIndex) => (
+            <DaySection
+              key={day.id}
+              day={day}
+              dayIndex={dayIndex}
+              isCollapsed={collapsedDays.has(day.id)}
+              onToggle={() => toggleDay(day.id)}
+              onDragEnd={handleDragEnd(day.id)}
+              onAddActivity={() => setEditingActivity({ dayId: day.id })}
+              onEditActivity={(activity) => setEditingActivity({ dayId: day.id, activity })}
+              onDeleteActivity={(activityId) => handleDeleteActivity(day.id, activityId)}
+              baseCurrency={trip.baseCurrency}
+              rates={rates}
+              sensors={sensors}
+            />
+          ))}
+        </div>
+      ) : (
+        <ExpenseSummary
+          trip={trip}
+          rates={rates}
+          ratesLoading={ratesLoading}
+          onRefreshRates={() => refreshRates(trip.baseCurrency)}
+        />
+      )}
+
+      {/* Activity form modal */}
+      {editingActivity && (
+        <ActivityForm
+          activity={editingActivity.activity}
+          defaultCurrency={trip.baseCurrency}
+          onSave={activity => handleSaveActivity(editingActivity.dayId, activity)}
+          onClose={() => setEditingActivity(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DaySection({
+  day,
+  dayIndex,
+  isCollapsed,
+  onToggle,
+  onDragEnd,
+  onAddActivity,
+  onEditActivity,
+  onDeleteActivity,
+  baseCurrency,
+  rates,
+  sensors,
+}: {
+  day: DayPlan;
+  dayIndex: number;
+  isCollapsed: boolean;
+  onToggle: () => void;
+  onDragEnd: (event: DragEndEvent) => void;
+  onAddActivity: () => void;
+  onEditActivity: (activity: Activity) => void;
+  onDeleteActivity: (activityId: string) => void;
+  baseCurrency: string;
+  rates: import('../types').ExchangeRates | null;
+  sensors: ReturnType<typeof useSensors>;
+}) {
+  const dateObj = parseISO(day.date);
+  const dayLabel = format(dateObj, 'M月d日 EEEE', { locale: zhCN });
+
+  const dayExpenseTotal = day.activities.reduce((s, a) => s + (a.expense?.amount || 0), 0);
+
+  return (
+    <div className="bg-white rounded-xl border border-border overflow-hidden">
+      {/* Day header */}
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-dim transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          <span className="font-semibold text-sm">Day {dayIndex + 1}</span>
+          <span className="text-sm text-on-surface-secondary">{dayLabel}</span>
+          <span className="text-xs text-on-surface-secondary bg-surface-container px-1.5 py-0.5 rounded">
+            {day.activities.length}项
+          </span>
+        </div>
+        {dayExpenseTotal > 0 && (
+          <span className="text-xs text-on-surface-secondary">
+            {baseCurrency} {dayExpenseTotal.toLocaleString()}
+          </span>
+        )}
+      </button>
+
+      {/* Activities */}
+      {!isCollapsed && (
+        <div className="px-3 pb-3">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext
+              items={day.activities.map(a => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {day.activities.map(activity => (
+                  <ActivityCard
+                    key={activity.id}
+                    activity={activity}
+                    baseCurrency={baseCurrency}
+                    rates={rates}
+                    onEdit={() => onEditActivity(activity)}
+                    onDelete={() => onDeleteActivity(activity.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          <button
+            onClick={onAddActivity}
+            className="w-full mt-2 p-2.5 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1.5 text-sm text-on-surface-secondary hover:text-primary"
+          >
+            <Plus size={16} />
+            添加活动
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
