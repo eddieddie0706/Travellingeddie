@@ -5,8 +5,8 @@ export function createSampleTrip(): Trip {
   const now = Date.now();
   return {
     id: generateId(),
-    name: '曼谷周末逃跑计划',
-    destination: '曼谷',
+    name: 'Welcome to BKK',
+    destination: 'Bangkok',
     startDate: '2026-04-03',
     endDate: '2026-04-06',
     coverColor: '#F97316',
