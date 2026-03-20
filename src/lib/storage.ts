@@ -1,4 +1,5 @@
 import type { Trip } from '../types';
+import { createSampleTrip } from './sampleData';
 
 const STORAGE_KEY = 'travellingeddie_trips';
 
@@ -6,7 +7,14 @@ const STORAGE_KEY = 'travellingeddie_trips';
 export function loadTrips(): Trip[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (data) {
+      const trips = JSON.parse(data) as Trip[];
+      if (trips.length > 0) return trips;
+    }
+    // First visit: seed with sample trip
+    const sample = [createSampleTrip()];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
+    return sample;
   } catch {
     return [];
   }
