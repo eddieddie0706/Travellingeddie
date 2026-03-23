@@ -64,7 +64,7 @@ export const CATEGORY_CONFIG: Record<ActivityCategory, { label: string; color: s
   flight:        { label: '飞机', color: '#3B82F6', icon: 'Plane' },
   train:         { label: '火车', color: '#6366F1', icon: 'TrainFront' },
   bus:           { label: '巴士', color: '#8B5CF6', icon: 'Bus' },
-  car:           { label: '自驾', color: '#A855F7', icon: 'Car' },
+  car:           { label: '打车', color: '#A855F7', icon: 'Car' },
   boat:          { label: '船', color: '#06B6D4', icon: 'Ship' },
   dining:        { label: '餐饮', color: '#F97316', icon: 'UtensilsCrossed' },
   bar:           { label: '酒吧', color: '#EC4899', icon: 'Wine' },
