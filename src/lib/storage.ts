@@ -5,16 +5,36 @@ import { createSampleTrip } from './sampleData';
 
 const COLLECTION = 'trips';
 const LOCAL_KEY = 'travellingeddie_trips';
+const SAMPLE_VERSION_KEY = 'travellingeddie_sample_version';
+const CURRENT_SAMPLE_VERSION = 2; // Bump this to reset sample data
 
 // Firestore operations
 export async function loadTripsFromFirestore(): Promise<Trip[]> {
   try {
+    const storedVersion = parseInt(localStorage.getItem(SAMPLE_VERSION_KEY) || '0');
+    const needsReset = storedVersion < CURRENT_SAMPLE_VERSION;
+
+    if (needsReset) {
+      // Delete all existing trips and recreate sample
+      const snapshot = await getDocs(collection(db, COLLECTION));
+      for (const d of snapshot.docs) {
+        await deleteDoc(doc(db, COLLECTION, d.id));
+      }
+      localStorage.removeItem(LOCAL_KEY);
+
+      const sample = createSampleTrip();
+      await saveTripToFirestore(sample);
+      localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
+      return [sample];
+    }
+
     const snapshot = await getDocs(collection(db, COLLECTION));
     const trips = snapshot.docs.map(d => d.data() as Trip);
     if (trips.length === 0) {
       // First visit: seed with sample trip
       const sample = createSampleTrip();
       await saveTripToFirestore(sample);
+      localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
       return [sample];
     }
     // Sort by updatedAt descending
