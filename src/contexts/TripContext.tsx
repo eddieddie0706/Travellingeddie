@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { Trip, ExchangeRates } from '../types';
-import { loadTrips, saveTrips, generateId } from '../lib/storage';
+import { loadTripsFromFirestore, saveTripToFirestore, deleteTripFromFirestore, generateId } from '../lib/storage';
 import { fetchExchangeRates } from '../lib/currency';
 
 interface TripContextValue {
   trips: Trip[];
+  loading: boolean;
   rates: ExchangeRates | null;
   ratesLoading: boolean;
   addTrip: (trip: Omit<Trip, 'id' | 'days' | 'createdAt' | 'updatedAt'>) => Trip;
@@ -18,13 +19,18 @@ interface TripContextValue {
 const TripContext = createContext<TripContextValue | null>(null);
 
 export function TripProvider({ children }: { children: ReactNode }) {
-  const [trips, setTrips] = useState<Trip[]>(() => loadTrips());
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
 
+  // Load trips from Firestore on mount
   useEffect(() => {
-    saveTrips(trips);
-  }, [trips]);
+    loadTripsFromFirestore().then(data => {
+      setTrips(data);
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     refreshRates();
@@ -65,15 +71,19 @@ export function TripProvider({ children }: { children: ReactNode }) {
     };
 
     setTrips(prev => [trip, ...prev]);
+    saveTripToFirestore(trip);
     return trip;
   }, []);
 
   const updateTrip = useCallback((trip: Trip) => {
-    setTrips(prev => prev.map(t => t.id === trip.id ? { ...trip, updatedAt: Date.now() } : t));
+    const updated = { ...trip, updatedAt: Date.now() };
+    setTrips(prev => prev.map(t => t.id === trip.id ? updated : t));
+    saveTripToFirestore(updated);
   }, []);
 
   const deleteTrip = useCallback((id: string) => {
     setTrips(prev => prev.filter(t => t.id !== id));
+    deleteTripFromFirestore(id);
   }, []);
 
   const getTrip = useCallback((id: string) => {
@@ -81,7 +91,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   }, [trips]);
 
   return (
-    <TripContext.Provider value={{ trips, rates, ratesLoading, addTrip, updateTrip, deleteTrip, getTrip, refreshRates }}>
+    <TripContext.Provider value={{ trips, loading, rates, ratesLoading, addTrip, updateTrip, deleteTrip, getTrip, refreshRates }}>
       {children}
     </TripContext.Provider>
   );

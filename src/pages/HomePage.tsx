@@ -5,9 +5,17 @@ import { useTrips } from '../contexts/TripContext';
 import { COVER_COLORS, CURRENCIES } from '../types';
 
 export default function HomePage() {
-  const { trips, addTrip, deleteTrip } = useTrips();
+  const { trips, loading, addTrip, deleteTrip } = useTrips();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="text-center py-16 text-on-surface-secondary">
+        <p>加载中...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
