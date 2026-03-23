@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Calendar, MapPin, Trash2 } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
 import { COVER_COLORS, CURRENCIES } from '../types';
+import { convertCurrency } from '../lib/currency';
 
 export default function HomePage() {
-  const { trips, loading, addTrip, deleteTrip } = useTrips();
+  const { trips, loading, addTrip, deleteTrip, rates } = useTrips();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
 
@@ -46,7 +47,13 @@ export default function HomePage() {
           {trips.map(trip => {
             const totalExpenses = trip.days.reduce(
               (sum, day) => sum + day.activities.reduce(
-                (s, a) => s + (a.expense?.amount || 0), 0
+                (s, a) => {
+                  if (!a.expense) return s;
+                  const converted = rates
+                    ? convertCurrency(a.expense.amount, a.expense.currency, trip.baseCurrency, rates)
+                    : a.expense.amount;
+                  return s + converted;
+                }, 0
               ), 0
             );
             const activityCount = trip.days.reduce((s, d) => s + d.activities.length, 0);
@@ -92,7 +99,7 @@ export default function HomePage() {
 
                   {totalExpenses > 0 && (
                     <div className="mt-2 text-sm font-medium text-primary">
-                      已花费 {trip.baseCurrency} {totalExpenses.toLocaleString()}
+                      已花费 {trip.baseCurrency} {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   )}
                 </div>

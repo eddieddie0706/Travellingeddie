@@ -24,6 +24,7 @@ import type { Activity, DayPlan } from '../types';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
 import ExpenseSummary from '../components/ExpenseSummary';
+import { convertCurrency } from '../lib/currency';
 
 type Tab = 'itinerary' | 'expenses';
 
@@ -213,7 +214,13 @@ function DaySection({
   const dateObj = parseISO(day.date);
   const dayLabel = format(dateObj, 'M月d日 EEEE', { locale: zhCN });
 
-  const dayExpenseTotal = day.activities.reduce((s, a) => s + (a.expense?.amount || 0), 0);
+  const dayExpenseTotal = day.activities.reduce((s, a) => {
+    if (!a.expense) return s;
+    const converted = rates
+      ? convertCurrency(a.expense.amount, a.expense.currency, baseCurrency, rates)
+      : a.expense.amount;
+    return s + converted;
+  }, 0);
 
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
@@ -232,7 +239,7 @@ function DaySection({
         </div>
         {dayExpenseTotal > 0 && (
           <span className="text-xs text-on-surface-secondary">
-            {baseCurrency} {dayExpenseTotal.toLocaleString()}
+            {baseCurrency} {dayExpenseTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         )}
       </button>
