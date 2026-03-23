@@ -296,7 +296,8 @@ function DaySection({
     const converted = rates
       ? convertCurrency(a.expense.amount, a.expense.currency, baseCurrency, rates)
       : a.expense.amount;
-    return s + converted;
+    const splitCount = a.expense.splitCount && a.expense.splitCount > 1 ? a.expense.splitCount : 1;
+    return s + converted / splitCount;
   }, 0);
 
   return (

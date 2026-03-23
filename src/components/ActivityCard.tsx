@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Clock, MapPin, Trash2, Edit3 } from 'lucide-react';
+import { GripVertical, Clock, MapPin, Trash2, Edit3, Users } from 'lucide-react';
 import type { Activity, ExchangeRates } from '../types';
 import { CATEGORY_CONFIG } from '../types';
 import { convertCurrency } from '../lib/currency';
@@ -93,6 +93,12 @@ export default function ActivityCard({ activity, baseCurrency, rates, onEdit, on
                 {convertedAmount !== null && activity.expense.currency !== baseCurrency && (
                   <div className="text-xs text-on-surface-secondary">
                     ≈ {baseCurrency} {convertedAmount.toLocaleString()}
+                  </div>
+                )}
+                {activity.expense.splitCount && activity.expense.splitCount > 1 && (
+                  <div className="text-xs text-primary flex items-center justify-end gap-0.5 mt-0.5">
+                    <Users size={10} />
+                    <span>AA×{activity.expense.splitCount} 人均{(activity.expense.amount / activity.expense.splitCount).toFixed(0)}</span>
                   </div>
                 )}
               </div>

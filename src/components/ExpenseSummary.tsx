@@ -19,8 +19,10 @@ interface CategoryTotal {
 }
 
 export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRates }: Props) {
-  const { grandTotal, byCategory, byCurrency } = useMemo(() => {
+  const { grandTotal, myTotal, splitSavings, splitItemCount, byCategory, byCurrency } = useMemo(() => {
     let grandTotal = 0;
+    let myTotal = 0;
+    let splitItemCount = 0;
     const catMap = new Map<ActivityCategory, { total: number; count: number }>();
     const curMap = new Map<string, number>();
 
@@ -38,8 +40,14 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
 
         grandTotal += converted;
 
+        // Calculate per-person share
+        const splitCount = act.expense.splitCount && act.expense.splitCount > 1 ? act.expense.splitCount : 1;
+        const myShare = converted / splitCount;
+        myTotal += myShare;
+        if (splitCount > 1) splitItemCount++;
+
         const existing = catMap.get(act.category) || { total: 0, count: 0 };
-        catMap.set(act.category, { total: existing.total + converted, count: existing.count + 1 });
+        catMap.set(act.category, { total: existing.total + myShare, count: existing.count + 1 });
       }
     }
 
@@ -51,7 +59,9 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
       .map(([currency, total]) => ({ currency, total }))
       .sort((a, b) => b.total - a.total);
 
-    return { grandTotal, byCategory, byCurrency };
+    const splitSavings = grandTotal - myTotal;
+
+    return { grandTotal, myTotal, splitSavings, splitItemCount, byCategory, byCurrency };
   }, [trip, rates]);
 
   return (
@@ -72,9 +82,24 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
             刷新汇率
           </button>
         </div>
-        <div className="text-2xl font-bold text-primary">
-          {trip.baseCurrency} {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
+        {splitItemCount > 0 ? (
+          <div>
+            <div className="text-2xl font-bold text-primary">
+              {trip.baseCurrency} {myTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-xs text-on-surface-secondary mt-1">
+              我的实付（含{splitItemCount}笔AA均摊）
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-xs text-on-surface-secondary">
+              <span>总消费 {trip.baseCurrency} {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-green-600">AA节省 {trip.baseCurrency} {splitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-2xl font-bold text-primary">
+            {trip.baseCurrency} {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        )}
         {rates && rates.lastUpdated > 0 && (
           <div className="text-xs text-on-surface-secondary mt-1">
             汇率更新于 {new Date(rates.lastUpdated).toLocaleString('zh-CN')}
@@ -106,7 +131,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
           <h3 className="font-semibold text-sm mb-3">按分类</h3>
           <div className="space-y-2.5">
             {byCategory.map(({ category, total, count }) => {
-              const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
+              const pct = myTotal > 0 ? (total / myTotal) * 100 : 0;
               return (
                 <div key={category}>
                   <div className="flex items-center justify-between text-sm mb-1">

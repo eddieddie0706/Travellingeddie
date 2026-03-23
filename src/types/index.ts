@@ -52,6 +52,7 @@ export interface Expense {
   convertedAmount?: number;
   convertedCurrency?: string;
   note?: string;
+  splitCount?: number; // AA制：参与均摊人数，undefined或1表示不均摊
 }
 
 export interface ExchangeRates {

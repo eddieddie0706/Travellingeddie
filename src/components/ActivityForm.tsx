@@ -22,6 +22,8 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
   const [hasExpense, setHasExpense] = useState(!!activity?.expense);
   const [amount, setAmount] = useState(activity?.expense?.amount?.toString() || '');
   const [currency, setCurrency] = useState(activity?.expense?.currency || defaultCurrency);
+  const [isSplit, setIsSplit] = useState((activity?.expense?.splitCount ?? 0) > 1);
+  const [splitCount, setSplitCount] = useState(activity?.expense?.splitCount?.toString() || '2');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +31,11 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
 
     let expense: Expense | undefined;
     if (hasExpense && amount) {
-      expense = { amount: parseFloat(amount), currency };
+      expense = {
+        amount: parseFloat(amount),
+        currency,
+        ...(isSplit && parseInt(splitCount) > 1 ? { splitCount: parseInt(splitCount) } : {}),
+      };
     }
 
     onSave({
@@ -146,30 +152,63 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
 
           {/* Expense fields */}
           {hasExpense && (
-            <div className="grid grid-cols-[1fr_100px] gap-3 pl-6">
-              <div>
-                <label className="block text-sm font-medium mb-1">金额</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-                />
+            <div className="pl-6 space-y-3">
+              <div className="grid grid-cols-[1fr_100px] gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">金额</label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">货币</label>
+                  <select
+                    value={currency}
+                    onChange={e => setCurrency(e.target.value)}
+                    className="w-full px-2 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
+                  >
+                    {CURRENCIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">货币</label>
-                <select
-                  value={currency}
-                  onChange={e => setCurrency(e.target.value)}
-                  className="w-full px-2 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-                >
-                  {CURRENCIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+
+              {/* AA制 */}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSplit}
+                    onChange={e => setIsSplit(e.target.checked)}
+                    className="rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium">AA制</span>
+                </label>
+                {isSplit && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={splitCount}
+                      onChange={e => setSplitCount(e.target.value)}
+                      min="2"
+                      max="99"
+                      className="w-16 px-2 py-1.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm text-center"
+                    />
+                    <span className="text-sm text-on-surface-secondary">人均摊</span>
+                    {amount && parseInt(splitCount) > 1 && (
+                      <span className="text-xs text-on-surface-secondary">
+                        (人均 {(parseFloat(amount) / parseInt(splitCount)).toFixed(2)} {currency})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
