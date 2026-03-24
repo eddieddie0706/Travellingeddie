@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Wallet, RefreshCw, TrendingUp } from 'lucide-react';
 import type { Trip, ExchangeRates, ActivityCategory } from '../types';
 import { CATEGORY_CONFIG } from '../types';
@@ -22,50 +21,47 @@ interface CategoryTotal {
 export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRates }: Props) {
   const { t, locale } = useLanguage();
 
-  const { grandTotal, myTotal, splitSavings, splitItemCount, byCategory, byCurrency } = useMemo(() => {
-    let grandTotal = 0;
-    let myTotal = 0;
-    let splitItemCount = 0;
-    const catMap = new Map<ActivityCategory, { total: number; count: number }>();
-    const curMap = new Map<string, number>();
+  // Compute all expense totals directly (no useMemo to avoid stale cache)
+  let grandTotal = 0;
+  let myTotal = 0;
+  let splitItemCount = 0;
+  const catMap = new Map<ActivityCategory, { total: number; count: number }>();
+  const curMap = new Map<string, number>();
 
-    for (const day of trip.days) {
-      for (const act of day.activities) {
-        if (!act.expense) continue;
+  for (const day of trip.days) {
+    for (const act of day.activities) {
+      if (!act.expense) continue;
 
-        // Original currency totals
-        curMap.set(act.expense.currency, (curMap.get(act.expense.currency) || 0) + act.expense.amount);
+      // Original currency totals
+      curMap.set(act.expense.currency, (curMap.get(act.expense.currency) || 0) + act.expense.amount);
 
-        // Convert to base currency
-        const converted = rates
-          ? convertCurrency(act.expense.amount, act.expense.currency, trip.baseCurrency, rates)
-          : act.expense.amount;
+      // Convert to base currency
+      const converted = rates
+        ? convertCurrency(act.expense.amount, act.expense.currency, trip.baseCurrency, rates)
+        : act.expense.amount;
 
-        grandTotal += converted;
+      grandTotal += converted;
 
-        // Calculate per-person share
-        const splitCount = act.expense.splitCount && act.expense.splitCount > 1 ? act.expense.splitCount : 1;
-        const myShare = converted / splitCount;
-        myTotal += myShare;
-        if (splitCount > 1) splitItemCount++;
+      // Calculate per-person share
+      const splitCount = act.expense.splitCount && act.expense.splitCount > 1 ? act.expense.splitCount : 1;
+      const myShare = converted / splitCount;
+      myTotal += myShare;
+      if (splitCount > 1) splitItemCount++;
 
-        const existing = catMap.get(act.category) || { total: 0, count: 0 };
-        catMap.set(act.category, { total: existing.total + myShare, count: existing.count + 1 });
-      }
+      const existing = catMap.get(act.category) || { total: 0, count: 0 };
+      catMap.set(act.category, { total: existing.total + myShare, count: existing.count + 1 });
     }
+  }
 
-    const byCategory: CategoryTotal[] = Array.from(catMap.entries())
-      .map(([category, { total, count }]) => ({ category, total, count }))
-      .sort((a, b) => b.total - a.total);
+  const byCategory: CategoryTotal[] = Array.from(catMap.entries())
+    .map(([category, { total, count }]) => ({ category, total, count }))
+    .sort((a, b) => b.total - a.total);
 
-    const byCurrency = Array.from(curMap.entries())
-      .map(([currency, total]) => ({ currency, total }))
-      .sort((a, b) => b.total - a.total);
+  const byCurrency = Array.from(curMap.entries())
+    .map(([currency, total]) => ({ currency, total }))
+    .sort((a, b) => b.total - a.total);
 
-    const splitSavings = grandTotal - myTotal;
-
-    return { grandTotal, myTotal, splitSavings, splitItemCount, byCategory, byCurrency };
-  }, [trip, rates]);
+  const splitSavings = grandTotal - myTotal;
 
   return (
     <div className="space-y-4">
