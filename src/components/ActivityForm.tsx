@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { Activity, ActivityCategory, Expense } from '../types';
 import { CATEGORY_CONFIG, CURRENCIES } from '../types';
 import { generateId } from '../lib/storage';
+import { useLanguage } from '../contexts/LanguageContext';
 import CategoryIcon from './CategoryIcon';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ActivityForm({ activity, defaultCurrency, onSave, onClose }: Props) {
+  const { t } = useLanguage();
   const [title, setTitle] = useState(activity?.title || '');
   const [category, setCategory] = useState<ActivityCategory>(activity?.category || 'sightseeing');
   const [startTime, setStartTime] = useState(activity?.startTime || '');
@@ -61,7 +63,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
       >
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-border px-4 py-3 flex items-center justify-between rounded-t-2xl">
-          <h3 className="font-semibold">{activity ? '编辑活动' : '添加活动'}</h3>
+          <h3 className="font-semibold">{activity ? t('editActivity') : t('addActivity')}</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-container">
             <X size={20} />
           </button>
@@ -70,12 +72,12 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium mb-1">活动名称 *</label>
+            <label className="block text-sm font-medium mb-1">{t('activityName')} *</label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="例如：飞往东京"
+              placeholder={t('activityNamePlaceholder')}
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
               autoFocus
             />
@@ -83,9 +85,9 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium mb-2">分类</label>
+            <label className="block text-sm font-medium mb-2">{t('category')}</label>
             <div className="grid grid-cols-5 sm:grid-cols-5 gap-1.5">
-              {categories.map(([key, config]) => (
+              {categories.map(([key]) => (
                 <button
                   key={key}
                   type="button"
@@ -97,7 +99,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                   }`}
                 >
                   <CategoryIcon category={key} size={16} />
-                  <span className="truncate w-full text-center">{config.label}</span>
+                  <span className="truncate w-full text-center">{t(`cat.${key}` as any)}</span>
                 </button>
               ))}
             </div>
@@ -106,7 +108,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
           {/* Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">开始时间</label>
+              <label className="block text-sm font-medium mb-1">{t('startTime')}</label>
               <input
                 type="time"
                 value={startTime}
@@ -115,7 +117,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">结束时间</label>
+              <label className="block text-sm font-medium mb-1">{t('endTime')}</label>
               <input
                 type="time"
                 value={endTime}
@@ -127,12 +129,12 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-medium mb-1">地点</label>
+            <label className="block text-sm font-medium mb-1">{t('location')}</label>
             <input
               type="text"
               value={location}
               onChange={e => setLocation(e.target.value)}
-              placeholder="例如：成田国际机场"
+              placeholder={t('locationPlaceholder')}
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
             />
           </div>
@@ -146,7 +148,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                 onChange={e => setHasExpense(e.target.checked)}
                 className="rounded border-border text-primary focus:ring-primary"
               />
-              <span className="text-sm font-medium">添加费用</span>
+              <span className="text-sm font-medium">{t('addExpense')}</span>
             </label>
           </div>
 
@@ -155,7 +157,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
             <div className="pl-6 space-y-3">
               <div className="grid grid-cols-[1fr_100px] gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">金额</label>
+                  <label className="block text-sm font-medium mb-1">{t('amount')}</label>
                   <input
                     type="number"
                     value={amount}
@@ -167,7 +169,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">货币</label>
+                  <label className="block text-sm font-medium mb-1">{t('currency')}</label>
                   <select
                     value={currency}
                     onChange={e => setCurrency(e.target.value)}
@@ -180,7 +182,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                 </div>
               </div>
 
-              {/* AA制 */}
+              {/* Split bill */}
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -189,7 +191,7 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                     onChange={e => setIsSplit(e.target.checked)}
                     className="rounded border-border text-primary focus:ring-primary"
                   />
-                  <span className="text-sm font-medium">AA制</span>
+                  <span className="text-sm font-medium">{t('splitBill')}</span>
                 </label>
                 {isSplit && (
                   <div className="flex items-center gap-2">
@@ -201,10 +203,10 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
                       max="99"
                       className="w-16 px-2 py-1.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm text-center"
                     />
-                    <span className="text-sm text-on-surface-secondary">人均摊</span>
+                    <span className="text-sm text-on-surface-secondary">{t('splitPeople')}</span>
                     {amount && parseInt(splitCount) > 1 && (
                       <span className="text-xs text-on-surface-secondary">
-                        (人均 {(parseFloat(amount) / parseInt(splitCount)).toFixed(2)} {currency})
+                        ({t('perPerson')} {(parseFloat(amount) / parseInt(splitCount)).toFixed(2)} {currency})
                       </span>
                     )}
                   </div>
@@ -215,11 +217,11 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium mb-1">备注</label>
+            <label className="block text-sm font-medium mb-1">{t('notes')}</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="补充信息..."
+              placeholder={t('notesPlaceholder')}
               rows={2}
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm resize-none"
             />
@@ -232,14 +234,14 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
               onClick={onClose}
               className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-surface-container transition-colors"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={!title.trim()}
               className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-40"
             >
-              {activity ? '保存' : '添加'}
+              {activity ? t('save') : t('add')}
             </button>
           </div>
         </form>

@@ -18,9 +18,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { format, parseISO } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+import { zhCN, enUS } from 'date-fns/locale';
 import { Plus, Calendar, Wallet, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import type { Activity, DayPlan } from '../types';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
@@ -33,6 +34,7 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getTrip, updateTrip, rates, ratesLoading, refreshRates } = useTrips();
+  const { t, locale } = useLanguage();
   const trip = getTrip(id || '');
 
   const [activeTab, setActiveTab] = useState<Tab>('itinerary');
@@ -154,9 +156,9 @@ export default function TripDetailPage() {
   if (!trip) {
     return (
       <div className="text-center py-16">
-        <p className="text-on-surface-secondary">旅行不存在</p>
+        <p className="text-on-surface-secondary">{t('tripNotFound')}</p>
         <button onClick={() => navigate('/')} className="mt-4 text-primary hover:underline">
-          返回首页
+          {t('backToHome')}
         </button>
       </div>
     );
@@ -173,7 +175,7 @@ export default function TripDetailPage() {
           <h1 className="text-xl sm:text-2xl font-bold">{trip.name}</h1>
         </div>
         <p className="text-sm text-on-surface-secondary">
-          {trip.destination} · {trip.startDate} ~ {trip.endDate} · {trip.days.length}天 · {totalActivities}项活动
+          {trip.destination} · {trip.startDate} ~ {trip.endDate} · {trip.days.length} {t('days')} · {totalActivities} {t('activities')}
         </p>
       </div>
 
@@ -188,7 +190,7 @@ export default function TripDetailPage() {
           }`}
         >
           <Calendar size={16} />
-          行程
+          {t('itinerary')}
         </button>
         <button
           onClick={() => setActiveTab('expenses')}
@@ -199,7 +201,7 @@ export default function TripDetailPage() {
           }`}
         >
           <Wallet size={16} />
-          费用
+          {t('expenses')}
         </button>
       </div>
 
@@ -223,6 +225,7 @@ export default function TripDetailPage() {
                 onDeleteActivity={(activityId) => handleDeleteActivity(day.id, activityId)}
                 baseCurrency={trip.baseCurrency}
                 rates={rates}
+                locale={locale}
               />
             ))}
           </div>
@@ -249,8 +252,9 @@ export default function TripDetailPage() {
   );
 }
 
-function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boolean; children: React.ReactNode }) {
+function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boolean; locale: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-drop-${dayId}` });
+  const { t } = useLanguage();
 
   return (
     <div
@@ -260,7 +264,7 @@ function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boo
       {children}
       {isEmpty && (
         <div className={`py-4 text-center text-xs text-on-surface-secondary ${isOver ? 'text-primary' : ''}`}>
-          拖拽活动到此处
+          {t('dragHere')}
         </div>
       )}
     </div>
@@ -277,6 +281,7 @@ function DaySection({
   onDeleteActivity,
   baseCurrency,
   rates,
+  locale,
 }: {
   day: DayPlan;
   dayIndex: number;
@@ -287,9 +292,12 @@ function DaySection({
   onDeleteActivity: (activityId: string) => void;
   baseCurrency: string;
   rates: import('../types').ExchangeRates | null;
+  locale: string;
 }) {
+  const { t } = useLanguage();
   const dateObj = parseISO(day.date);
-  const dayLabel = format(dateObj, 'M月d日 EEEE', { locale: zhCN });
+  const dateFnsLocale = locale === 'zh' ? zhCN : enUS;
+  const dayLabel = format(dateObj, t('dateFormat'), { locale: dateFnsLocale });
 
   const dayExpenseTotal = day.activities.reduce((s, a) => {
     if (!a.expense) return s;
@@ -312,7 +320,7 @@ function DaySection({
           <span className="font-semibold text-sm">Day {dayIndex + 1}</span>
           <span className="text-sm text-on-surface-secondary">{dayLabel}</span>
           <span className="text-xs text-on-surface-secondary bg-surface-container px-1.5 py-0.5 rounded">
-            {day.activities.length}项
+            {day.activities.length}{t('items')}
           </span>
         </div>
         {dayExpenseTotal > 0 && (
@@ -329,7 +337,7 @@ function DaySection({
             items={day.activities.map(a => a.id)}
             strategy={verticalListSortingStrategy}
           >
-            <DayDropZone dayId={day.id} isEmpty={day.activities.length === 0}>
+            <DayDropZone dayId={day.id} isEmpty={day.activities.length === 0} locale={locale}>
               <div className="space-y-2">
                 {day.activities.map(activity => (
                   <ActivityCard
@@ -350,7 +358,7 @@ function DaySection({
             className="w-full mt-2 p-2.5 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1.5 text-sm text-on-surface-secondary hover:text-primary"
           >
             <Plus size={16} />
-            添加活动
+            {t('addActivity')}
           </button>
         </div>
       )}

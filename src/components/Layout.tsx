@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Plane, List, ArrowLeft } from 'lucide-react';
+import { Plane, List, ArrowLeft, Globe } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Layout() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const { locale, setLocale, t } = useLanguage();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -21,17 +23,25 @@ export default function Layout() {
               <span className="hidden sm:inline">TravellingEddie</span>
             </Link>
           </div>
-          {isHome && (
-            <nav className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
+            {isHome && (
               <Link
                 to="/"
                 className="px-3 py-1.5 text-sm rounded-lg hover:bg-surface-container transition-colors flex items-center gap-1.5"
               >
                 <List size={16} />
-                <span className="hidden sm:inline">我的旅行</span>
+                <span className="hidden sm:inline">{t('myTrips')}</span>
               </Link>
-            </nav>
-          )}
+            )}
+            <button
+              onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+              className="px-2 py-1.5 text-sm rounded-lg hover:bg-surface-container transition-colors flex items-center gap-1"
+              title={locale === 'zh' ? 'Switch to English' : '切换到中文'}
+            >
+              <Globe size={16} />
+              <span className="text-xs font-medium">{locale === 'zh' ? 'EN' : '中'}</span>
+            </button>
+          </div>
         </div>
       </header>
 

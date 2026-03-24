@@ -4,6 +4,7 @@ import { GripVertical, Clock, MapPin, Trash2, Edit3, Users } from 'lucide-react'
 import type { Activity, ExchangeRates } from '../types';
 import { CATEGORY_CONFIG } from '../types';
 import { convertCurrency } from '../lib/currency';
+import { useLanguage } from '../contexts/LanguageContext';
 import CategoryIcon from './CategoryIcon';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function ActivityCard({ activity, baseCurrency, rates, onEdit, onDelete }: Props) {
+  const { t } = useLanguage();
   const {
     attributes,
     listeners,
@@ -29,8 +31,6 @@ export default function ActivityCard({ activity, baseCurrency, rates, onEdit, on
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-
-  const config = CATEGORY_CONFIG[activity.category];
 
   const convertedAmount = activity.expense && rates
     ? convertCurrency(
@@ -78,8 +78,8 @@ export default function ActivityCard({ activity, baseCurrency, rates, onEdit, on
                     <span className="truncate max-w-[120px]">{activity.location}</span>
                   </span>
                 )}
-                <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: config.color + '18', color: config.color }}>
-                  {config.label}
+                <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: CATEGORY_CONFIG[activity.category].color + '18', color: CATEGORY_CONFIG[activity.category].color }}>
+                  {t(`cat.${activity.category}` as any)}
                 </span>
               </div>
             </div>
@@ -98,7 +98,7 @@ export default function ActivityCard({ activity, baseCurrency, rates, onEdit, on
                 {activity.expense.splitCount && activity.expense.splitCount > 1 && (
                   <div className="text-xs text-primary flex items-center justify-end gap-0.5 mt-0.5">
                     <Users size={10} />
-                    <span>AA×{activity.expense.splitCount} 人均{(activity.expense.amount / activity.expense.splitCount).toFixed(0)}</span>
+                    <span>{t('aaSplit', { count: activity.expense.splitCount, amount: (activity.expense.amount / activity.expense.splitCount).toFixed(0) })}</span>
                   </div>
                 )}
               </div>
@@ -123,3 +123,4 @@ export default function ActivityCard({ activity, baseCurrency, rates, onEdit, on
     </div>
   );
 }
+

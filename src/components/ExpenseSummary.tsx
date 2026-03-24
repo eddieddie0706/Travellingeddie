@@ -3,6 +3,7 @@ import { Wallet, RefreshCw, TrendingUp } from 'lucide-react';
 import type { Trip, ExchangeRates, ActivityCategory } from '../types';
 import { CATEGORY_CONFIG } from '../types';
 import { convertCurrency } from '../lib/currency';
+import { useLanguage } from '../contexts/LanguageContext';
 import CategoryIcon from './CategoryIcon';
 
 interface Props {
@@ -19,6 +20,8 @@ interface CategoryTotal {
 }
 
 export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRates }: Props) {
+  const { t, locale } = useLanguage();
+
   const { grandTotal, myTotal, splitSavings, splitItemCount, byCategory, byCurrency } = useMemo(() => {
     let grandTotal = 0;
     let myTotal = 0;
@@ -71,7 +74,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Wallet size={18} className="text-primary" />
-            <h3 className="font-semibold">费用总计</h3>
+            <h3 className="font-semibold">{t('totalExpenses')}</h3>
           </div>
           <button
             onClick={onRefreshRates}
@@ -79,7 +82,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
             className="flex items-center gap-1 text-xs text-on-surface-secondary hover:text-primary transition-colors"
           >
             <RefreshCw size={12} className={ratesLoading ? 'animate-spin' : ''} />
-            刷新汇率
+            {t('refreshRates')}
           </button>
         </div>
         {splitItemCount > 0 ? (
@@ -88,11 +91,11 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
               {trip.baseCurrency} {myTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-on-surface-secondary mt-1">
-              我的实付（含{splitItemCount}笔AA均摊）
+              {t('myPayment', { count: splitItemCount })}
             </div>
             <div className="flex items-center gap-3 mt-2 text-xs text-on-surface-secondary">
-              <span>总消费 {trip.baseCurrency} {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <span className="text-green-600">AA节省 {trip.baseCurrency} {splitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>{t('totalSpending')} {trip.baseCurrency} {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-green-600">{t('aaSavings')} {trip.baseCurrency} {splitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         ) : (
@@ -102,7 +105,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
         )}
         {rates && rates.lastUpdated > 0 && (
           <div className="text-xs text-on-surface-secondary mt-1">
-            汇率更新于 {new Date(rates.lastUpdated).toLocaleString('zh-CN')}
+            {t('ratesUpdatedAt')} {new Date(rates.lastUpdated).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}
           </div>
         )}
       </div>
@@ -112,7 +115,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={18} className="text-on-surface-secondary" />
-            <h3 className="font-semibold text-sm">按货币</h3>
+            <h3 className="font-semibold text-sm">{t('byCurrency')}</h3>
           </div>
           <div className="space-y-2">
             {byCurrency.map(({ currency, total }) => (
@@ -128,7 +131,7 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
       {/* By Category */}
       {byCategory.length > 0 && (
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="font-semibold text-sm mb-3">按分类</h3>
+          <h3 className="font-semibold text-sm mb-3">{t('byCategory')}</h3>
           <div className="space-y-2.5">
             {byCategory.map(({ category, total, count }) => {
               const pct = myTotal > 0 ? (total / myTotal) * 100 : 0;
@@ -137,8 +140,8 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="flex items-center gap-2">
                       <CategoryIcon category={category} size={14} />
-                      <span>{CATEGORY_CONFIG[category].label}</span>
-                      <span className="text-xs text-on-surface-secondary">({count}笔)</span>
+                      <span>{t(`cat.${category}` as any)}</span>
+                      <span className="text-xs text-on-surface-secondary">({t('countItems', { count })})</span>
                     </div>
                     <span className="font-medium">
                       {trip.baseCurrency} {total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
