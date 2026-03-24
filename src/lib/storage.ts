@@ -8,46 +8,66 @@ const LOCAL_KEY = 'travellingeddie_trips';
 const SAMPLE_VERSION_KEY = 'travellingeddie_sample_version';
 const CURRENT_SAMPLE_VERSION = 2; // Bump this to reset sample data
 
-// Firestore operations
+// Load trips: localStorage is primary, Firestore syncs in background
 export async function loadTripsFromFirestore(): Promise<Trip[]> {
+  const storedVersion = parseInt(localStorage.getItem(SAMPLE_VERSION_KEY) || '0');
+  const needsReset = storedVersion < CURRENT_SAMPLE_VERSION;
+
+  if (needsReset) {
+    // Clear old data
+    localStorage.removeItem(LOCAL_KEY);
+    // Clear Firestore in background
+    clearFirestore();
+
+    const sample = createSampleTrip();
+    saveTripsLocalFull([sample]);
+    localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
+    // Also save to Firestore in background
+    setDoc(doc(db, COLLECTION, sample.id), sample).catch(() => {});
+    return [sample];
+  }
+
+  // Load from localStorage first (instant, always up-to-date)
+  const localTrips = loadTripsLocal();
+
+  // Sync from Firestore in background (for cross-device sync)
+  syncFromFirestore(localTrips);
+
+  return localTrips;
+}
+
+// Background sync: merge Firestore data with local data
+async function syncFromFirestore(localTrips: Trip[]): Promise<void> {
   try {
-    const storedVersion = parseInt(localStorage.getItem(SAMPLE_VERSION_KEY) || '0');
-    const needsReset = storedVersion < CURRENT_SAMPLE_VERSION;
-
-    if (needsReset) {
-      // Delete all existing trips and recreate sample
-      const snapshot = await getDocs(collection(db, COLLECTION));
-      for (const d of snapshot.docs) {
-        await deleteDoc(doc(db, COLLECTION, d.id));
-      }
-      localStorage.removeItem(LOCAL_KEY);
-
-      const sample = createSampleTrip();
-      await saveTripToFirestore(sample);
-      localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
-      return [sample];
-    }
-
     const snapshot = await getDocs(collection(db, COLLECTION));
-    const trips = snapshot.docs.map(d => d.data() as Trip);
-    if (trips.length === 0) {
-      // First visit: seed with sample trip
-      const sample = createSampleTrip();
-      await saveTripToFirestore(sample);
-      localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
-      return [sample];
+    const firestoreTrips = snapshot.docs.map(d => d.data() as Trip);
+
+    if (firestoreTrips.length === 0 && localTrips.length > 0) {
+      // Firestore empty but we have local data → push local to Firestore
+      for (const trip of localTrips) {
+        setDoc(doc(db, COLLECTION, trip.id), trip).catch(() => {});
+      }
     }
-    // Sort by updatedAt descending
-    trips.sort((a, b) => b.updatedAt - a.updatedAt);
-    return trips;
-  } catch (err) {
-    console.warn('Firestore load failed, falling back to localStorage:', err);
-    return loadTripsLocal();
+    // If both have data, localStorage is the source of truth
+    // (Firestore sync for cross-device can be added later)
+  } catch {
+    // Firestore unavailable, no problem - localStorage has our data
+  }
+}
+
+async function clearFirestore(): Promise<void> {
+  try {
+    const snapshot = await getDocs(collection(db, COLLECTION));
+    for (const d of snapshot.docs) {
+      await deleteDoc(doc(db, COLLECTION, d.id));
+    }
+  } catch {
+    // ignore
   }
 }
 
 export async function saveTripToFirestore(trip: Trip): Promise<void> {
-  saveTripsLocal(trip);
+  saveTripsLocalSingle(trip);
   try {
     await setDoc(doc(db, COLLECTION, trip.id), trip);
   } catch (err) {
@@ -64,23 +84,36 @@ export async function deleteTripFromFirestore(id: string): Promise<void> {
   }
 }
 
-// localStorage - always used as persistent backup
+// localStorage operations (primary storage)
 function loadTripsLocal(): Trip[] {
   try {
     const data = localStorage.getItem(LOCAL_KEY);
     if (data) {
       const trips = JSON.parse(data) as Trip[];
-      if (trips.length > 0) return trips;
+      if (trips.length > 0) {
+        trips.sort((a, b) => b.updatedAt - a.updatedAt);
+        return trips;
+      }
     }
+    // No local data → create sample
     const sample = [createSampleTrip()];
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(sample));
+    saveTripsLocalFull(sample);
+    localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
     return sample;
   } catch {
     return [];
   }
 }
 
-function saveTripsLocal(trip: Trip): void {
+function saveTripsLocalFull(trips: Trip[]): void {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(trips));
+  } catch {
+    // localStorage not available
+  }
+}
+
+function saveTripsLocalSingle(trip: Trip): void {
   try {
     const data = localStorage.getItem(LOCAL_KEY);
     const trips: Trip[] = data ? JSON.parse(data) : [];
