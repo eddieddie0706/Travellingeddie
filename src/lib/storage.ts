@@ -16,42 +16,58 @@ export async function loadTripsFromFirestore(): Promise<Trip[]> {
   if (needsReset) {
     // Clear old data
     localStorage.removeItem(LOCAL_KEY);
-    // Clear Firestore in background
-    clearFirestore();
 
     const sample = createSampleTrip();
     saveTripsLocalFull([sample]);
     localStorage.setItem(SAMPLE_VERSION_KEY, String(CURRENT_SAMPLE_VERSION));
-    // Also save to Firestore in background
-    setDoc(doc(db, COLLECTION, sample.id), sample).catch(() => {});
+
+    // Clear Firestore then write new sample (background, awaited in sequence)
+    clearFirestore().then(() => {
+      setDoc(doc(db, COLLECTION, sample.id), sample).catch(() => {});
+    });
+
     return [sample];
   }
 
   // Load from localStorage first (instant, always up-to-date)
   const localTrips = loadTripsLocal();
 
-  // Sync from Firestore in background (for cross-device sync)
-  syncFromFirestore(localTrips);
+  // Sync localStorage → Firestore in background
+  syncToFirestore(localTrips);
 
   return localTrips;
 }
 
-// Background sync: merge Firestore data with local data
-async function syncFromFirestore(localTrips: Trip[]): Promise<void> {
+// Background sync: push localStorage (source of truth) to Firestore
+async function syncToFirestore(localTrips: Trip[]): Promise<void> {
   try {
+    // Get current Firestore docs
     const snapshot = await getDocs(collection(db, COLLECTION));
-    const firestoreTrips = snapshot.docs.map(d => d.data() as Trip);
+    const firestoreIds = new Set(snapshot.docs.map(d => d.id));
+    const localIds = new Set(localTrips.map(t => t.id));
 
-    if (firestoreTrips.length === 0 && localTrips.length > 0) {
-      // Firestore empty but we have local data → push local to Firestore
-      for (const trip of localTrips) {
-        setDoc(doc(db, COLLECTION, trip.id), trip).catch(() => {});
+    // Delete Firestore docs that don't exist locally
+    for (const d of snapshot.docs) {
+      if (!localIds.has(d.id)) {
+        await deleteDoc(doc(db, COLLECTION, d.id));
       }
     }
-    // If both have data, localStorage is the source of truth
-    // (Firestore sync for cross-device can be added later)
-  } catch {
-    // Firestore unavailable, no problem - localStorage has our data
+
+    // Push all local trips to Firestore (upsert)
+    for (const trip of localTrips) {
+      const firestoreTrip = firestoreIds.has(trip.id)
+        ? snapshot.docs.find(d => d.id === trip.id)?.data() as Trip | undefined
+        : undefined;
+
+      // Only write if local is newer or doesn't exist in Firestore
+      if (!firestoreTrip || trip.updatedAt > (firestoreTrip.updatedAt || 0)) {
+        await setDoc(doc(db, COLLECTION, trip.id), trip);
+      }
+    }
+
+    console.log('Firestore sync complete');
+  } catch (err) {
+    console.warn('Firestore background sync failed:', err);
   }
 }
 
