@@ -47,14 +47,16 @@ export async function loadTripsFromFirestore(): Promise<Trip[]> {
 }
 
 export async function saveTripToFirestore(trip: Trip): Promise<void> {
+  saveTripsLocal(trip);
   try {
     await setDoc(doc(db, COLLECTION, trip.id), trip);
   } catch (err) {
-    console.warn('Firestore save failed:', err);
+    console.warn('Firestore save failed, data saved to localStorage:', err);
   }
 }
 
 export async function deleteTripFromFirestore(id: string): Promise<void> {
+  deleteTripsLocal(id);
   try {
     await deleteDoc(doc(db, COLLECTION, id));
   } catch (err) {
@@ -62,7 +64,7 @@ export async function deleteTripFromFirestore(id: string): Promise<void> {
   }
 }
 
-// localStorage fallback
+// localStorage - always used as persistent backup
 function loadTripsLocal(): Trip[] {
   try {
     const data = localStorage.getItem(LOCAL_KEY);
@@ -75,6 +77,34 @@ function loadTripsLocal(): Trip[] {
     return sample;
   } catch {
     return [];
+  }
+}
+
+function saveTripsLocal(trip: Trip): void {
+  try {
+    const data = localStorage.getItem(LOCAL_KEY);
+    const trips: Trip[] = data ? JSON.parse(data) : [];
+    const idx = trips.findIndex(t => t.id === trip.id);
+    if (idx >= 0) {
+      trips[idx] = trip;
+    } else {
+      trips.unshift(trip);
+    }
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(trips));
+  } catch {
+    // localStorage not available
+  }
+}
+
+function deleteTripsLocal(id: string): void {
+  try {
+    const data = localStorage.getItem(LOCAL_KEY);
+    if (data) {
+      const trips: Trip[] = JSON.parse(data);
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(trips.filter(t => t.id !== id)));
+    }
+  } catch {
+    // localStorage not available
   }
 }
 
