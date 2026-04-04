@@ -1,24 +1,15 @@
 import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Trip } from '../types';
-import { createSampleTrip } from './sampleData';
 
 const COLLECTION = 'trips';
 
 // Firestore is the sole source of truth — no localStorage
 export async function loadTripsFromFirestore(): Promise<Trip[]> {
   const snapshot = await getDocs(collection(db, COLLECTION));
-
-  if (snapshot.docs.length > 0) {
-    const trips = snapshot.docs.map(d => d.data() as Trip);
-    trips.sort((a, b) => b.updatedAt - a.updatedAt);
-    return trips;
-  }
-
-  // Firestore is empty — create one sample trip and upload it
-  const sample = createSampleTrip();
-  await setDoc(doc(db, COLLECTION, sample.id), sample);
-  return [sample];
+  const trips = snapshot.docs.map(d => d.data() as Trip);
+  trips.sort((a, b) => b.updatedAt - a.updatedAt);
+  return trips;
 }
 
 export async function clearFirestore(): Promise<void> {
