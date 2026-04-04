@@ -24,12 +24,16 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
 
-  // Load trips from Firestore on mount
-  useEffect(() => {
+  const reload = useCallback(() => {
+    setLoading(true);
     loadTripsFromFirestore().then(data => {
       setTrips(data);
       setLoading(false);
     });
+  }, []);
+
+  useEffect(() => {
+    reload();
   }, []);
 
   useEffect(() => {
@@ -71,19 +75,19 @@ export function TripProvider({ children }: { children: ReactNode }) {
     };
 
     setTrips(prev => [trip, ...prev]);
-    saveTripToFirestore(trip);
+    saveTripToFirestore(trip).catch(() => reload());
     return trip;
   }, []);
 
   const updateTrip = useCallback((trip: Trip) => {
     const updated = { ...trip, updatedAt: Date.now() };
     setTrips(prev => prev.map(t => t.id === trip.id ? updated : t));
-    saveTripToFirestore(updated);
+    saveTripToFirestore(updated).catch(() => reload());
   }, []);
 
   const deleteTrip = useCallback((id: string) => {
     setTrips(prev => prev.filter(t => t.id !== id));
-    deleteTripFromFirestore(id);
+    deleteTripFromFirestore(id).catch(() => reload());
   }, []);
 
   const getTrip = useCallback((id: string) => {
