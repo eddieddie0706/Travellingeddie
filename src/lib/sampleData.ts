@@ -1,10 +1,14 @@
 import type { Trip } from '../types';
 import { generateId } from './storage';
 
+// Fixed ID ensures all browsers write to the same Firestore document
+// even if they race to create the sample simultaneously
+const SAMPLE_TRIP_ID = 'sample-bkk-2026';
+
 export function createSampleTrip(): Trip {
   const now = Date.now();
   return {
-    id: generateId(),
+    id: SAMPLE_TRIP_ID,
     name: 'Welcome to BKK',
     destination: 'Bangkok',
     startDate: '2026-04-03',
