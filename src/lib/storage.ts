@@ -19,8 +19,13 @@ export async function clearFirestore(): Promise<void> {
   }
 }
 
+// Firestore SDK throws on undefined values — strip them before writing
+function stripUndefined<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export async function saveTripToFirestore(trip: Trip): Promise<void> {
-  await setDoc(doc(db, COLLECTION, trip.id), trip);
+  await setDoc(doc(db, COLLECTION, trip.id), stripUndefined(trip));
 }
 
 export async function deleteTripFromFirestore(id: string): Promise<void> {
