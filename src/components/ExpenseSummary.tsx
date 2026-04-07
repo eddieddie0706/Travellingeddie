@@ -34,7 +34,7 @@ interface BillItem {
 }
 
 function BillModal({ trip, rates, onClose }: { trip: Trip; rates: ExchangeRates | null; onClose: () => void }) {
-  const { t, locale } = useLanguage();
+  const { locale } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   // Collect all split items
