@@ -1,4 +1,5 @@
-import { Wallet, RefreshCw, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { Wallet, RefreshCw, TrendingUp, Receipt, Copy, Check, X } from 'lucide-react';
 import type { Trip, ExchangeRates, ActivityCategory } from '../types';
 import { CATEGORY_CONFIG } from '../types';
 import { convertCurrency } from '../lib/currency';
@@ -18,8 +19,190 @@ interface CategoryTotal {
   count: number;
 }
 
+// ── Bill Modal ────────────────────────────────────────────────────────────────
+
+interface BillItem {
+  dayDate: string;
+  dayIndex: number;
+  title: string;
+  category: ActivityCategory;
+  originalAmount: number;
+  originalCurrency: string;
+  convertedAmount: number;
+  splitCount: number;
+  perPersonConverted: number;
+}
+
+function BillModal({ trip, rates, onClose }: { trip: Trip; rates: ExchangeRates | null; onClose: () => void }) {
+  const { t, locale } = useLanguage();
+  const [copied, setCopied] = useState(false);
+
+  // Collect all split items
+  const items: BillItem[] = [];
+  trip.days.forEach((day, dayIndex) => {
+    day.activities.forEach(act => {
+      if (!act.expense) return;
+      const splitCount = act.expense.splitCount && act.expense.splitCount > 1 ? act.expense.splitCount : 0;
+      if (splitCount < 2) return;
+
+      const converted = rates
+        ? convertCurrency(act.expense.amount, act.expense.currency, trip.baseCurrency, rates)
+        : act.expense.amount;
+
+      items.push({
+        dayDate: day.date,
+        dayIndex,
+        title: act.title,
+        category: act.category,
+        originalAmount: act.expense.amount,
+        originalCurrency: act.expense.currency,
+        convertedAmount: converted,
+        splitCount,
+        perPersonConverted: converted / splitCount,
+      });
+    });
+  });
+
+  // Group by splitCount for summary
+  const byCount = new Map<number, number>();
+  items.forEach(item => {
+    byCount.set(item.splitCount, (byCount.get(item.splitCount) || 0) + item.perPersonConverted);
+  });
+
+  const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleCopy = async () => {
+    const lines: string[] = [];
+    lines.push(`📋 ${trip.name} — ${locale === 'zh' ? '账单明细' : 'Bill'}`);
+    lines.push(`${trip.destination}  ${trip.startDate} ~ ${trip.endDate}`);
+    lines.push('');
+
+    items.forEach(item => {
+      const sameAsCurrency = item.originalCurrency === trip.baseCurrency;
+      const amountStr = sameAsCurrency
+        ? `${trip.baseCurrency} ${fmt(item.originalAmount)}`
+        : `${item.originalCurrency} ${fmt(item.originalAmount)} (≈ ${trip.baseCurrency} ${fmt(item.convertedAmount)})`;
+      lines.push(`• ${item.title}`);
+      lines.push(`  ${amountStr} ÷ ${item.splitCount} = ${trip.baseCurrency} ${fmt(item.perPersonConverted)}/人`);
+    });
+
+    lines.push('');
+    byCount.forEach((total, count) => {
+      lines.push(`${locale === 'zh' ? '每人合计' : 'Per person total'} (${count}人均摊项): ${trip.baseCurrency} ${fmt(total)}`);
+    });
+
+    if (rates) {
+      lines.push('');
+      lines.push(locale === 'zh' ? `（已按当前汇率换算为 ${trip.baseCurrency}）` : `(Converted to ${trip.baseCurrency} at current rates)`);
+    }
+
+    await navigator.clipboard.writeText(lines.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-border px-4 py-3 flex items-center justify-between rounded-t-2xl">
+          <div className="flex items-center gap-2">
+            <Receipt size={18} className="text-primary" />
+            <h3 className="font-semibold">{locale === 'zh' ? '账单明细' : 'Bill'}</h3>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-container">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Trip info */}
+        <div className="px-4 py-3 bg-surface-dim border-b border-border text-sm text-on-surface-secondary">
+          <span className="font-medium text-on-surface">{trip.name}</span>
+          <span className="mx-2">·</span>
+          {trip.startDate} ~ {trip.endDate}
+        </div>
+
+        {/* Items */}
+        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+          {items.length === 0 ? (
+            <p className="text-center py-8 text-on-surface-secondary text-sm">
+              {locale === 'zh' ? '暂无 AA 均摊项目' : 'No split items found'}
+            </p>
+          ) : (
+            items.map((item, i) => {
+              const sameAsCurrency = item.originalCurrency === trip.baseCurrency;
+              return (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-surface-dim">
+                  <div className="mt-0.5">
+                    <CategoryIcon category={item.category} size={15} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{item.title}</div>
+                    <div className="text-xs text-on-surface-secondary mt-0.5">
+                      Day {item.dayIndex + 1} · {item.dayDate}
+                    </div>
+                    <div className="text-xs text-on-surface-secondary mt-1">
+                      {!sameAsCurrency && (
+                        <span>{item.originalCurrency} {fmt(item.originalAmount)} ≈ </span>
+                      )}
+                      <span>{trip.baseCurrency} {fmt(item.convertedAmount)}</span>
+                      <span className="mx-1">÷ {item.splitCount}人</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-semibold text-primary">
+                      {trip.baseCurrency} {fmt(item.perPersonConverted)}
+                    </div>
+                    <div className="text-xs text-on-surface-secondary">/人</div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Summary */}
+        {items.length > 0 && (
+          <div className="border-t border-border px-4 py-3 space-y-1">
+            {Array.from(byCount.entries()).map(([count, total]) => (
+              <div key={count} className="flex justify-between items-center text-sm">
+                <span className="text-on-surface-secondary">
+                  {locale === 'zh' ? `每人合计（${count}人均摊项）` : `Per person (${count}-way splits)`}
+                </span>
+                <span className="font-bold text-primary text-base">
+                  {trip.baseCurrency} {fmt(total)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Copy button */}
+        <div className="px-4 pb-4 pt-2">
+          <button
+            onClick={handleCopy}
+            disabled={items.length === 0}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-40"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied
+              ? (locale === 'zh' ? '已复制！' : 'Copied!')
+              : (locale === 'zh' ? '复制账单' : 'Copy Bill')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRates }: Props) {
   const { t, locale } = useLanguage();
+  const [showBill, setShowBill] = useState(false);
 
   // Compute all expense totals directly (no useMemo to avoid stale cache)
   let grandTotal = 0;
@@ -157,6 +340,21 @@ export default function ExpenseSummary({ trip, rates, ratesLoading, onRefreshRat
             })}
           </div>
         </div>
+      )}
+
+      {/* Generate Bill */}
+      {splitItemCount > 0 && (
+        <button
+          onClick={() => setShowBill(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-border rounded-xl text-sm font-medium text-on-surface hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+        >
+          <Receipt size={16} />
+          {locale === 'zh' ? '出账单（向他人收款）' : 'Generate Bill'}
+        </button>
+      )}
+
+      {showBill && (
+        <BillModal trip={trip} rates={rates} onClose={() => setShowBill(false)} />
       )}
     </div>
   );
