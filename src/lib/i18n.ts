@@ -4,7 +4,7 @@ type Translations = Record<string, string>;
 
 const zh: Translations = {
   // Layout
-  myTrips: '我的旅行',
+  myTrips: 'Travelling Eddie',
 
   // HomePage
   loading: '加载中...',
@@ -99,7 +99,7 @@ const zh: Translations = {
 
 const en: Translations = {
   // Layout
-  myTrips: 'My Trips',
+  myTrips: 'Travelling Eddie',
 
   // HomePage
   loading: 'Loading...',
