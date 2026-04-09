@@ -9,7 +9,7 @@ interface TripContextValue {
   loading: boolean;
   rates: ExchangeRates | null;
   ratesLoading: boolean;
-  addTrip: (trip: Omit<Trip, 'id' | 'days' | 'createdAt' | 'updatedAt'>) => Trip;
+  addTrip: (trip: Omit<Trip, 'id' | 'days' | 'createdAt' | 'updatedAt'> & { id?: string }) => Trip;
   updateTrip: (trip: Trip) => void;
   deleteTrip: (id: string) => void;
   getTrip: (id: string) => Trip | undefined;
@@ -50,7 +50,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const addTrip = useCallback((data: Omit<Trip, 'id' | 'days' | 'createdAt' | 'updatedAt'>) => {
+  const addTrip = useCallback((data: Omit<Trip, 'id' | 'days' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
     const now = Date.now();
     const start = new Date(data.startDate);
     const end = new Date(data.endDate);
@@ -66,9 +66,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
       };
     });
 
+    const { id: customId, ...rest } = data;
     const trip: Trip = {
-      ...data,
-      id: generateId(),
+      ...rest,
+      id: customId || generateId(),
       days,
       createdAt: now,
       updatedAt: now,

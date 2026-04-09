@@ -28,6 +28,10 @@ const zh: Translations = {
   themeColor: '主题色',
   cancel: '取消',
   create: '创建',
+  tripIdLabel: '旅程ID（可选）',
+  tripIdPlaceholder: '如 bkk-april-2026（留空自动生成）',
+  tripIdInvalid: '只允许字母、数字和连字符（-）',
+  tripIdDuplicate: '此ID已被使用，请换一个',
 
   // TripDetailPage
   tripNotFound: '旅行不存在',
@@ -119,6 +123,10 @@ const en: Translations = {
   themeColor: 'Theme Color',
   cancel: 'Cancel',
   create: 'Create',
+  tripIdLabel: 'Trip ID (optional)',
+  tripIdPlaceholder: 'e.g. bkk-april-2026 (auto if empty)',
+  tripIdInvalid: 'Letters, numbers and hyphens only',
+  tripIdDuplicate: 'This ID already exists, try another',
 
   // TripDetailPage
   tripNotFound: 'Trip not found',

@@ -115,6 +115,7 @@ export default function HomePage() {
       {/* Create modal */}
       {showCreate && (
         <CreateTripModal
+          existingIds={trips.map(t => t.id)}
           onClose={() => setShowCreate(false)}
           onCreate={data => {
             const trip = addTrip(data);
@@ -128,11 +129,13 @@ export default function HomePage() {
 }
 
 function CreateTripModal({
+  existingIds,
   onClose,
   onCreate,
 }: {
+  existingIds: string[];
   onClose: () => void;
-  onCreate: (data: { name: string; destination: string; startDate: string; endDate: string; coverColor: string; baseCurrency: string }) => void;
+  onCreate: (data: { id?: string; name: string; destination: string; startDate: string; endDate: string; coverColor: string; baseCurrency: string }) => void;
 }) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
@@ -141,11 +144,28 @@ function CreateTripModal({
   const [endDate, setEndDate] = useState('');
   const [coverColor, setCoverColor] = useState(COVER_COLORS[0]);
   const [baseCurrency, setBaseCurrency] = useState('CNY');
+  const [customId, setCustomId] = useState('');
+  const [idError, setIdError] = useState('');
+
+  const validateId = (val: string): string => {
+    if (!val) return '';
+    if (!/^[a-zA-Z0-9-]+$/.test(val)) return t('tripIdInvalid');
+    if (existingIds.includes(val)) return t('tripIdDuplicate');
+    return '';
+  };
+
+  const handleIdChange = (val: string) => {
+    setCustomId(val);
+    setIdError(validateId(val));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
-    onCreate({ name: name.trim(), destination: destination.trim(), startDate, endDate, coverColor, baseCurrency });
+    const err = validateId(customId);
+    if (err) { setIdError(err); return; }
+    const id = customId.trim() || undefined;
+    onCreate({ id, name: name.trim(), destination: destination.trim(), startDate, endDate, coverColor, baseCurrency });
   };
 
   return (
@@ -169,6 +189,18 @@ function CreateTripModal({
               className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
               autoFocus
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('tripIdLabel')}</label>
+            <input
+              type="text"
+              value={customId}
+              onChange={e => handleIdChange(e.target.value.toLowerCase())}
+              placeholder={t('tripIdPlaceholder')}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm font-mono ${idError ? 'border-danger' : 'border-border'}`}
+            />
+            {idError && <p className="text-danger text-xs mt-1">{idError}</p>}
           </div>
 
           <div>
