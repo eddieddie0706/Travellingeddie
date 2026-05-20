@@ -33,7 +33,7 @@ type Tab = 'itinerary' | 'expenses';
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getTrip, updateTrip, rates, ratesLoading, refreshRates } = useTrips();
+  const { getTrip, updateTrip, rates, ratesLoading, refreshRates, loading } = useTrips();
   const { t, locale } = useLanguage();
   const trip = getTrip(id || '');
 
@@ -153,6 +153,14 @@ export default function TripDetailPage() {
     updateTrip({ ...trip, days: updatedDays });
   }, [trip, updateTrip]);
 
+  if (loading) {
+    return (
+      <div className="text-center py-16 text-on-surface-secondary">
+        <p>{t('loading')}</p>
+      </div>
+    );
+  }
+
   if (!trip) {
     return (
       <div className="text-center py-16">
@@ -252,7 +260,7 @@ export default function TripDetailPage() {
   );
 }
 
-function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boolean; locale: string; children: React.ReactNode }) {
+function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-drop-${dayId}` });
   const { t } = useLanguage();
 
@@ -337,7 +345,7 @@ function DaySection({
             items={day.activities.map(a => a.id)}
             strategy={verticalListSortingStrategy}
           >
-            <DayDropZone dayId={day.id} isEmpty={day.activities.length === 0} locale={locale}>
+            <DayDropZone dayId={day.id} isEmpty={day.activities.length === 0}>
               <div className="space-y-2">
                 {day.activities.map(activity => (
                   <ActivityCard

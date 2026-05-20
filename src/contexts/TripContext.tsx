@@ -78,18 +78,18 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setTrips(prev => [trip, ...prev]);
     saveTripToFirestore(trip).catch(() => reload());
     return trip;
-  }, []);
+  }, [reload]);
 
   const updateTrip = useCallback((trip: Trip) => {
     const updated = { ...trip, updatedAt: Date.now() };
     setTrips(prev => prev.map(t => t.id === trip.id ? updated : t));
     saveTripToFirestore(updated).catch(() => reload());
-  }, []);
+  }, [reload]);
 
   const deleteTrip = useCallback((id: string) => {
     setTrips(prev => prev.filter(t => t.id !== id));
     deleteTripFromFirestore(id).catch(() => reload());
-  }, []);
+  }, [reload]);
 
   const getTrip = useCallback((id: string) => {
     return trips.find(t => t.id === id);

@@ -12,13 +12,6 @@ export async function loadTripsFromFirestore(): Promise<Trip[]> {
   return trips;
 }
 
-export async function clearFirestore(): Promise<void> {
-  const snapshot = await getDocs(collection(db, COLLECTION));
-  for (const d of snapshot.docs) {
-    await deleteDoc(doc(db, COLLECTION, d.id));
-  }
-}
-
 // Firestore SDK throws on undefined values — strip them before writing
 function stripUndefined<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
