@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -40,6 +40,25 @@ export default function TripDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('itinerary');
   const [editingActivity, setEditingActivity] = useState<{ dayId: string; activity?: Activity } | null>(null);
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditName = useCallback(() => {
+    if (!trip) return;
+    setDraftName(trip.name);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  }, [trip]);
+
+  const commitName = useCallback(() => {
+    if (!trip) return;
+    const trimmed = draftName.trim();
+    if (trimmed && trimmed !== trip.name) updateTrip({ ...trip, name: trimmed });
+    setEditingName(false);
+  }, [trip, draftName, updateTrip]);
+
+  const cancelName = useCallback(() => setEditingName(false), []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -179,8 +198,29 @@ export default function TripDetailPage() {
       {/* Trip header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: trip.coverColor }} />
-          <h1 className="text-xl sm:text-2xl font-bold">{trip.name}</h1>
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: trip.coverColor }} />
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={draftName}
+              onChange={e => setDraftName(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitName(); }
+                if (e.key === 'Escape') { e.preventDefault(); cancelName(); }
+              }}
+              className="text-xl sm:text-2xl font-bold bg-transparent border-b-2 border-primary outline-none w-full"
+              autoFocus
+            />
+          ) : (
+            <h1
+              className="text-xl sm:text-2xl font-bold cursor-pointer hover:text-primary transition-colors"
+              onClick={startEditName}
+              title={t('editTripName')}
+            >
+              {trip.name}
+            </h1>
+          )}
         </div>
         <p className="text-sm text-on-surface-secondary">
           {trip.destination} · {trip.startDate} ~ {trip.endDate} · {trip.days.length} {t('days')} · {totalActivities} {t('activities')}

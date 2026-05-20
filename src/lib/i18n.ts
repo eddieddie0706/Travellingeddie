@@ -36,6 +36,7 @@ const zh: Translations = {
   // TripDetailPage
   tripNotFound: '旅行不存在',
   backToHome: '返回首页',
+  editTripName: '点击编辑旅程名称',
   itinerary: '行程',
   expenses: '费用',
   dragHere: '拖拽活动到此处',
@@ -131,6 +132,7 @@ const en: Translations = {
   // TripDetailPage
   tripNotFound: 'Trip not found',
   backToHome: 'Back to Home',
+  editTripName: 'Click to edit trip name',
   itinerary: 'Itinerary',
   expenses: 'Expenses',
   dragHere: 'Drag activities here',
