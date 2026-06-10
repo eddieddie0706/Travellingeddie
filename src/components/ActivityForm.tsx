@@ -54,52 +54,46 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
   };
 
   const categories = Object.entries(CATEGORY_CONFIG) as [ActivityCategory, typeof CATEGORY_CONFIG[ActivityCategory]][];
+  const inputCls = 'w-full px-3 py-2.5 bg-surface-dim border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-colors';
+  const labelCls = 'block text-xs font-medium text-on-surface-secondary uppercase tracking-wider mb-1.5';
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto"
+        style={{ boxShadow: 'var(--shadow-lift)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-border px-4 py-3 flex items-center justify-between rounded-t-2xl">
-          <h3 className="font-semibold">{activity ? t('editActivity') : t('addActivity')}</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-container">
-            <X size={20} />
+        <div className="sticky top-0 bg-surface border-b border-border px-5 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 className="font-display text-base">{activity ? t('editActivity') : t('addActivity')}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-secondary transition-colors">
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium mb-1">{t('activityName')} *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={t('activityNamePlaceholder')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-              autoFocus
-            />
+            <label className={labelCls}>{t('activityName')} *</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+              placeholder={t('activityNamePlaceholder')} className={inputCls} autoFocus />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium mb-2">{t('category')}</label>
-            <div className="grid grid-cols-5 sm:grid-cols-5 gap-1.5">
+            <label className={labelCls}>{t('category')}</label>
+            <div className="grid grid-cols-5 gap-1.5">
               {categories.map(([key]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setCategory(key)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
+                <button key={key} type="button" onClick={() => setCategory(key)}
+                  className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-xs transition-all ${
                     category === key
-                      ? 'border-primary bg-primary/5 font-medium'
-                      : 'border-transparent hover:bg-surface-container'
+                      ? 'border-primary bg-primary/6 text-on-surface font-medium'
+                      : 'border-transparent hover:bg-surface-container text-on-surface-secondary'
                   }`}
                 >
                   <CategoryIcon category={key} size={16} />
-                  <span className="truncate w-full text-center">{t(`cat.${key}` as any)}</span>
+                  <span className="truncate w-full text-center leading-tight">{t(`cat.${key}` as any)}</span>
                 </button>
               ))}
             </div>
@@ -108,139 +102,88 @@ export default function ActivityForm({ activity, defaultCurrency, onSave, onClos
           {/* Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">{t('startTime')}</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-              />
+              <label className={labelCls}>{t('startTime')}</label>
+              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">{t('endTime')}</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={e => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-              />
+              <label className={labelCls}>{t('endTime')}</label>
+              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={inputCls} />
             </div>
           </div>
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-medium mb-1">{t('location')}</label>
-            <input
-              type="text"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              placeholder={t('locationPlaceholder')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-            />
+            <label className={labelCls}>{t('location')}</label>
+            <input type="text" value={location} onChange={e => setLocation(e.target.value)}
+              placeholder={t('locationPlaceholder')} className={inputCls} />
           </div>
 
           {/* Expense toggle */}
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasExpense}
-                onChange={e => setHasExpense(e.target.checked)}
-                className="rounded border-border text-primary focus:ring-primary"
-              />
-              <span className="text-sm font-medium">{t('addExpense')}</span>
-            </label>
-          </div>
+          <label className="flex items-center gap-3 cursor-pointer select-none group">
+            <div className={`w-10 h-5.5 rounded-full relative transition-colors ${hasExpense ? 'bg-primary' : 'bg-surface-container'}`}
+              onClick={() => setHasExpense(v => !v)}>
+              <div className={`absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-all ${hasExpense ? 'left-5' : 'left-0.5'}`} />
+            </div>
+            <span className="text-sm font-medium">{t('addExpense')}</span>
+          </label>
 
           {/* Expense fields */}
           {hasExpense && (
-            <div className="pl-6 space-y-3">
-              <div className="grid grid-cols-[1fr_100px] gap-3">
+            <div className="bg-surface-dim rounded-xl p-4 space-y-3">
+              <div className="grid grid-cols-[1fr_96px] gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t('amount')}</label>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-                  />
+                  <label className={labelCls}>{t('amount')}</label>
+                  <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00" step="0.01" min="0" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">{t('currency')}</label>
-                  <select
-                    value={currency}
-                    onChange={e => setCurrency(e.target.value)}
-                    className="w-full px-2 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-                  >
-                    {CURRENCIES.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                  <label className={labelCls}>{t('currency')}</label>
+                  <select value={currency} onChange={e => setCurrency(e.target.value)} className={inputCls}>
+                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* Split bill */}
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSplit}
-                    onChange={e => setIsSplit(e.target.checked)}
-                    className="rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm font-medium">{t('splitBill')}</span>
-                </label>
-                {isSplit && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={splitCount}
-                      onChange={e => setSplitCount(e.target.value)}
-                      min="2"
-                      max="99"
-                      className="w-16 px-2 py-1.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm text-center"
-                    />
-                    <span className="text-sm text-on-surface-secondary">{t('splitPeople')}</span>
-                    {amount && parseInt(splitCount) > 1 && (
-                      <span className="text-xs text-on-surface-secondary">
-                        ({t('perPerson')} {(parseFloat(amount) / parseInt(splitCount)).toFixed(2)} {currency})
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className={`w-10 h-5.5 rounded-full relative transition-colors ${isSplit ? 'bg-primary' : 'bg-surface-container'}`}
+                  onClick={() => setIsSplit(v => !v)}>
+                  <div className={`absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-all ${isSplit ? 'left-5' : 'left-0.5'}`} />
+                </div>
+                <span className="text-sm font-medium">{t('splitBill')}</span>
+              </label>
+
+              {isSplit && (
+                <div className="flex items-center gap-3">
+                  <input type="number" value={splitCount} onChange={e => setSplitCount(e.target.value)}
+                    min="2" max="99"
+                    className="w-16 px-3 py-2 bg-white border border-border rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  <span className="text-sm text-on-surface-secondary">{t('splitPeople')}</span>
+                  {amount && parseInt(splitCount) > 1 && (
+                    <span className="text-xs text-on-surface-secondary ml-auto">
+                      {t('perPerson')} {(parseFloat(amount) / parseInt(splitCount)).toFixed(2)} {currency}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium mb-1">{t('notes')}</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder={t('notesPlaceholder')}
-              rows={2}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm resize-none"
-            />
+            <label className={labelCls}>{t('notes')}</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder={t('notesPlaceholder')} rows={2}
+              className={`${inputCls} resize-none`} />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-surface-container transition-colors"
-            >
+          <div className="flex gap-2.5 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-surface-container transition-colors">
               {t('cancel')}
             </button>
-            <button
-              type="submit"
-              disabled={!title.trim()}
-              className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-40"
-            >
+            <button type="submit" disabled={!title.trim()}
+              className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-40">
               {activity ? t('save') : t('add')}
             </button>
           </div>

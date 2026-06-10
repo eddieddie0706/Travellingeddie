@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { Plane, Lock } from 'lucide-react';
+import { Plane } from 'lucide-react';
 
 const SESSION_KEY = 'te_auth';
 const PASSWORD = '138863';
-
-export function useAuth() {
-  return sessionStorage.getItem(SESSION_KEY) === '1';
-}
 
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(SESSION_KEY) === '1');
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
+  const [shaking, setShaking] = useState(false);
 
   if (authed) return <>{children}</>;
 
@@ -22,40 +19,66 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
       setAuthed(true);
     } else {
       setError(true);
+      setShaking(true);
       setInput('');
+      setTimeout(() => setShaking(false), 500);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-container px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Plane size={28} className="text-primary" />
-          <span className="text-xl font-bold">Travelling Eddie</span>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-surface-dim)' }}>
+      <div className="w-full max-w-xs text-center">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2 mb-12">
+          <Plane size={22} className="text-primary" />
+          <span className="font-display text-xl tracking-wide">Travelling Eddie</span>
         </div>
-        <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full mx-auto mb-4">
-          <Lock size={22} className="text-primary" />
+
+        {/* Lock icon */}
+        <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-6"
+          style={{ boxShadow: 'var(--shadow-card)' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
+            className="text-on-surface-secondary">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
         </div>
+
         <p className="text-on-surface-secondary text-sm mb-6">Enter password to continue</p>
+
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="password"
             value={input}
             onChange={e => { setInput(e.target.value); setError(false); }}
-            placeholder="Password"
+            placeholder="••••••"
             autoFocus
-            className={`w-full px-4 py-2.5 border rounded-lg text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${error ? 'border-danger bg-danger/5' : 'border-border'}`}
+            className={`w-full px-4 py-3 bg-white border rounded-xl text-center text-lg tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
+              error ? 'border-danger bg-red-50/50' : 'border-border'
+            } ${shaking ? 'animate-[shake_0.4s_ease]' : ''}`}
+            style={shaking ? { animation: 'shake 0.4s ease' } : {}}
           />
-          {error && <p className="text-danger text-sm">Incorrect password</p>}
+          {error && <p className="text-danger text-xs">Incorrect password</p>}
           <button
             type="submit"
             disabled={!input}
-            className="w-full py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-40"
+            className="w-full py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-40"
           >
             Enter
           </button>
         </form>
       </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%       { transform: translateX(-6px); }
+          40%       { transform: translateX(6px); }
+          60%       { transform: translateX(-4px); }
+          80%       { transform: translateX(4px); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,15 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3B82F6;
-  --color-primary-dark: #2563EB;
+  /* Warm paper + deep teal ink — travel journal palette */
+  --color-primary: #0F766E;
+  --color-primary-dark: #115E59;
   --color-surface: #FFFFFF;
-  --color-surface-dim: #F9FAFB;
-  --color-surface-container: #F3F4F6;
-  --color-on-surface: #111827;
-  --color-on-surface-secondary: #6B7280;
-  --color-border: #E5E7EB;
-  --color-danger: #EF4444;
+  --color-surface-dim: #FAF7F2;
+  --color-surface-container: #F1EBE1;
+  --color-on-surface: #1C1917;
+  --color-on-surface-secondary: #78716C;
+  --color-border: #E8E1D6;
+  --color-danger: #DC2626;
+
+  --font-display: Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
+
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 8px 24px -12px rgb(28 25 23 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(28 25 23 / 0.06), 0 16px 32px -16px rgb(28 25 23 / 0.18);
 }
 
 html {
@@ -35,6 +41,6 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
+  background: #D6CCBC;
   border-radius: 3px;
 }

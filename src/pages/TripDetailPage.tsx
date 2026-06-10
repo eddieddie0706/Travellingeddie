@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { format, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
-import { Plus, Calendar, Wallet, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, MapPin, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Activity, DayPlan } from '../types';
@@ -91,7 +91,6 @@ export default function TripDetailPage() {
     const sourceDay = findDayByActivityId(active.id);
     if (!sourceDay) return;
 
-    // Check if dropping on a day drop zone (id starts with "day-drop-")
     const overIdStr = String(over.id);
     const isDropOnDay = overIdStr.startsWith('day-drop-');
     const targetDay = isDropOnDay
@@ -101,7 +100,6 @@ export default function TripDetailPage() {
     if (!targetDay) return;
 
     if (sourceDay.id === targetDay.id && !isDropOnDay) {
-      // Same day reorder
       const updatedDays = trip.days.map(day => {
         if (day.id !== sourceDay.id) return day;
         const oldIndex = day.activities.findIndex(a => a.id === active.id);
@@ -111,20 +109,12 @@ export default function TripDetailPage() {
       });
       updateTrip({ ...trip, days: updatedDays });
     } else {
-      // Cross-day move
       const activity = sourceDay.activities.find(a => a.id === active.id);
       if (!activity) return;
-
       const updatedDays = trip.days.map(day => {
-        if (day.id === sourceDay.id) {
-          return { ...day, activities: day.activities.filter(a => a.id !== active.id) };
-        }
+        if (day.id === sourceDay.id) return { ...day, activities: day.activities.filter(a => a.id !== active.id) };
         if (day.id === targetDay.id) {
-          if (isDropOnDay) {
-            // Dropped on day zone — append to end
-            return { ...day, activities: [...day.activities, activity] };
-          }
-          // Insert at the position of the target activity
+          if (isDropOnDay) return { ...day, activities: [...day.activities, activity] };
           const targetIndex = day.activities.findIndex(a => a.id === over.id);
           const newActivities = [...day.activities];
           newActivities.splice(targetIndex, 0, activity);
@@ -138,7 +128,6 @@ export default function TripDetailPage() {
 
   const sortActivitiesByTime = useCallback((activities: Activity[]) => {
     return [...activities].sort((a, b) => {
-      // Activities without startTime go to the end
       if (!a.startTime && !b.startTime) return 0;
       if (!a.startTime) return 1;
       if (!b.startTime) return -1;
@@ -174,17 +163,18 @@ export default function TripDetailPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-on-surface-secondary">
-        <p>{t('loading')}</p>
+      <div className="flex flex-col items-center justify-center py-24 gap-3 text-on-surface-secondary">
+        <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <p className="text-sm">{t('loading')}</p>
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="text-center py-16">
-        <p className="text-on-surface-secondary">{t('tripNotFound')}</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-primary hover:underline">
+      <div className="text-center py-20">
+        <p className="text-on-surface-secondary mb-4">{t('tripNotFound')}</p>
+        <button onClick={() => navigate('/')} className="text-sm text-primary hover:underline">
           {t('backToHome')}
         </button>
       </div>
@@ -196,71 +186,68 @@ export default function TripDetailPage() {
   return (
     <div>
       {/* Trip header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: trip.coverColor }} />
-          {editingName ? (
-            <input
-              ref={nameInputRef}
-              value={draftName}
-              onChange={e => setDraftName(e.target.value)}
-              onBlur={commitName}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); commitName(); }
-                if (e.key === 'Escape') { e.preventDefault(); cancelName(); }
-              }}
-              className="text-xl sm:text-2xl font-bold bg-transparent border-b-2 border-primary outline-none w-full"
-              autoFocus
-            />
-          ) : (
-            <h1
-              className="text-xl sm:text-2xl font-bold cursor-pointer hover:text-primary transition-colors"
-              onClick={startEditName}
-              title={t('editTripName')}
-            >
-              {trip.name}
-            </h1>
-          )}
+      <div className="mb-8">
+        {/* Color strip */}
+        <div className="w-8 h-1 rounded-full mb-3" style={{ backgroundColor: trip.coverColor }} />
+
+        {editingName ? (
+          <input
+            ref={nameInputRef}
+            value={draftName}
+            onChange={e => setDraftName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commitName(); }
+              if (e.key === 'Escape') { e.preventDefault(); cancelName(); }
+            }}
+            className="font-display text-2xl sm:text-3xl bg-transparent border-b-2 border-primary outline-none w-full mb-2"
+            autoFocus
+          />
+        ) : (
+          <h1
+            className="font-display text-2xl sm:text-3xl cursor-pointer hover:text-primary transition-colors mb-2"
+            onClick={startEditName}
+            title={t('editTripName')}
+          >
+            {trip.name}
+          </h1>
+        )}
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-on-surface-secondary">
+          <span className="inline-flex items-center gap-1">
+            <MapPin size={13} />
+            {trip.destination}
+          </span>
+          <span className="text-border">·</span>
+          <span className="font-mono text-xs">{trip.startDate} — {trip.endDate}</span>
+          <span className="text-border">·</span>
+          <span>{trip.days.length} {t('days')}</span>
+          <span className="text-border">·</span>
+          <span>{totalActivities} {t('activities')}</span>
         </div>
-        <p className="text-sm text-on-surface-secondary">
-          {trip.destination} · {trip.startDate} ~ {trip.endDate} · {trip.days.length} {t('days')} · {totalActivities} {t('activities')}
-        </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-surface-container p-1 rounded-lg">
-        <button
-          onClick={() => setActiveTab('itinerary')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'itinerary'
-              ? 'bg-white shadow-sm text-on-surface'
-              : 'text-on-surface-secondary hover:text-on-surface'
-          }`}
-        >
-          <Calendar size={16} />
-          {t('itinerary')}
-        </button>
-        <button
-          onClick={() => setActiveTab('expenses')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'expenses'
-              ? 'bg-white shadow-sm text-on-surface'
-              : 'text-on-surface-secondary hover:text-on-surface'
-          }`}
-        >
-          <Wallet size={16} />
-          {t('expenses')}
-        </button>
+      <div className="flex gap-6 mb-6 border-b border-border">
+        {(['itinerary', 'expenses'] as Tab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+              activeTab === tab
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-secondary hover:text-on-surface'
+            }`}
+          >
+            {t(tab)}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
       {activeTab === 'itinerary' ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="space-y-4">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="space-y-3">
             {trip.days.map((day, dayIndex) => (
               <DaySection
                 key={day.id}
@@ -287,7 +274,6 @@ export default function TripDetailPage() {
         />
       )}
 
-      {/* Activity form modal */}
       {editingActivity && (
         <ActivityForm
           activity={editingActivity.activity}
@@ -303,15 +289,11 @@ export default function TripDetailPage() {
 function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-drop-${dayId}` });
   const { t } = useLanguage();
-
   return (
-    <div
-      ref={setNodeRef}
-      className={`min-h-[40px] rounded-lg transition-colors ${isOver ? 'bg-primary/10 ring-2 ring-primary/30' : ''}`}
-    >
+    <div ref={setNodeRef} className={`min-h-[40px] rounded-lg transition-colors ${isOver ? 'bg-primary/8 ring-2 ring-primary/20' : ''}`}>
       {children}
       {isEmpty && (
-        <div className={`py-4 text-center text-xs text-on-surface-secondary ${isOver ? 'text-primary' : ''}`}>
+        <div className={`py-5 text-center text-xs italic ${isOver ? 'text-primary' : 'text-on-surface-secondary/50'}`}>
           {t('dragHere')}
         </div>
       )}
@@ -320,73 +302,51 @@ function DayDropZone({ dayId, isEmpty, children }: { dayId: string; isEmpty: boo
 }
 
 function DaySection({
-  day,
-  dayIndex,
-  isCollapsed,
-  onToggle,
-  onAddActivity,
-  onEditActivity,
-  onDeleteActivity,
-  baseCurrency,
-  rates,
-  locale,
+  day, dayIndex, isCollapsed, onToggle, onAddActivity, onEditActivity, onDeleteActivity, baseCurrency, rates, locale,
 }: {
-  day: DayPlan;
-  dayIndex: number;
-  isCollapsed: boolean;
-  onToggle: () => void;
-  onAddActivity: () => void;
-  onEditActivity: (activity: Activity) => void;
-  onDeleteActivity: (activityId: string) => void;
-  baseCurrency: string;
-  rates: import('../types').ExchangeRates | null;
-  locale: string;
+  day: DayPlan; dayIndex: number; isCollapsed: boolean; onToggle: () => void;
+  onAddActivity: () => void; onEditActivity: (activity: Activity) => void; onDeleteActivity: (activityId: string) => void;
+  baseCurrency: string; rates: import('../types').ExchangeRates | null; locale: string;
 }) {
   const { t } = useLanguage();
-  const dateObj = parseISO(day.date);
   const dateFnsLocale = locale === 'zh' ? zhCN : enUS;
-  const dayLabel = format(dateObj, t('dateFormat'), { locale: dateFnsLocale });
+  const dayLabel = format(parseISO(day.date), t('dateFormat'), { locale: dateFnsLocale });
 
   const dayExpenseTotal = day.activities.reduce((s, a) => {
     if (!a.expense) return s;
-    const converted = rates
-      ? convertCurrency(a.expense.amount, a.expense.currency, baseCurrency, rates)
-      : a.expense.amount;
+    const converted = rates ? convertCurrency(a.expense.amount, a.expense.currency, baseCurrency, rates) : a.expense.amount;
     const splitCount = a.expense.splitCount && a.expense.splitCount > 1 ? a.expense.splitCount : 1;
     return s + converted / splitCount;
   }, 0);
 
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
-      {/* Day header */}
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
       <button
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-dim transition-colors"
+        className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-surface-dim transition-colors"
       >
-        <div className="flex items-center gap-2">
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-          <span className="font-semibold text-sm">Day {dayIndex + 1}</span>
-          <span className="text-sm text-on-surface-secondary">{dayLabel}</span>
-          <span className="text-xs text-on-surface-secondary bg-surface-container px-1.5 py-0.5 rounded">
-            {day.activities.length}{t('items')}
-          </span>
+        <div className="flex items-center gap-2.5">
+          {isCollapsed ? <ChevronRight size={15} className="text-on-surface-secondary" /> : <ChevronDown size={15} className="text-on-surface-secondary" />}
+          <span className="font-medium text-xs text-on-surface-secondary uppercase tracking-wider">Day {dayIndex + 1}</span>
+          <span className="text-sm text-on-surface">{dayLabel}</span>
+          {day.activities.length > 0 && (
+            <span className="text-xs text-on-surface-secondary/60 bg-surface-container px-1.5 py-0.5 rounded-full">
+              {day.activities.length}
+            </span>
+          )}
         </div>
         {dayExpenseTotal > 0 && (
-          <span className="text-xs text-on-surface-secondary">
-            {baseCurrency} {dayExpenseTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span className="text-xs font-mono text-on-surface-secondary">
+            {baseCurrency} {dayExpenseTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </span>
         )}
       </button>
 
-      {/* Activities */}
       {!isCollapsed && (
-        <div className="px-3 pb-3">
-          <SortableContext
-            items={day.activities.map(a => a.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <div className="px-3 pb-3 pt-1">
+          <SortableContext items={day.activities.map(a => a.id)} strategy={verticalListSortingStrategy}>
             <DayDropZone dayId={day.id} isEmpty={day.activities.length === 0}>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {day.activities.map(activity => (
                   <ActivityCard
                     key={activity.id}
@@ -403,9 +363,9 @@ function DaySection({
 
           <button
             onClick={onAddActivity}
-            className="w-full mt-2 p-2.5 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1.5 text-sm text-on-surface-secondary hover:text-primary"
+            className="w-full mt-2 py-2.5 border border-dashed border-border rounded-xl hover:border-primary hover:bg-primary/4 transition-all flex items-center justify-center gap-1.5 text-xs text-on-surface-secondary hover:text-primary"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             {t('addActivity')}
           </button>
         </div>
